@@ -1,8 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"github.com/nhdewitt/chirpy/internal/http/handlers"
 )
 
 const (
@@ -11,13 +17,24 @@ const (
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir(filepathRoot)))
-	server := &http.Server{
-		Handler: mux,
-		Addr:    ":" + port,
+	godotenv.Load()
+
+	// Establish DB Connection
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error connecting to DB: %s", err)
 	}
 
-	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
-	log.Fatal(server.ListenAndServe())
+	// API config
+	apiCfg := handlers.NewAPIConfig(db)
+
+	// Router
+	mux := http.NewServeMux()
+	apiCfg.RegisterRoutes(mux, filepathRoot)
+
+	// Start server
+	log.Printf("Server running at %s", port)
+	addr := ":" + port
+	log.Fatal(http.ListenAndServe(addr, mux))
 }
