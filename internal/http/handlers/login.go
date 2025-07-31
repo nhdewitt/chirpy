@@ -10,10 +10,10 @@ import (
 	"github.com/nhdewitt/chirpy/internal/models"
 )
 
-func (cfg *APIConfig) createUser(w http.ResponseWriter, r *http.Request) {
-	var resp models.User
-
+func (cfg *APIConfig) login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	var resp models.User
 
 	decoder := json.NewDecoder(r.Body)
 	var params models.UserLogin
@@ -26,32 +26,33 @@ func (cfg *APIConfig) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPwd, err := auth.HashPassword(params.Password)
+	var userDetails database.QueryUserRow
+
+	userDetails, err = cfg.Queries.QueryUser(r.Context(), params.Email)
 	if err != nil {
 		w.WriteHeader(500)
-		log.Printf("Error hashing password: %s", err)
-		resp.Error = "Error hashing password"
+		log.Printf("Error retrieving User ID: %s", err)
+		resp.Error = "Error retrieving User ID"
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user, err := cfg.Queries.CreateUser(r.Context(), database.CreateUserParams{
-		Email:          params.Email,
-		HashedPassword: hashedPwd,
-	})
+	hashedPwd := userDetails.HashedPassword
+	uid := userDetails.ID
+
+	err = auth.CheckPasswordHash(params.Password, hashedPwd)
 	if err != nil {
-		w.WriteHeader(500)
-		log.Printf("Error creating user: %s", err)
-		resp.Error = "Error creating user"
+		w.WriteHeader(401)
+		log.Printf("Incorrect email or password: %s", err)
+		resp.Error = "Incorrect email or password"
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	resp.ID = user.ID
-	resp.CreatedAt = user.CreatedAt
-	resp.UpdatedAt = user.UpdatedAt
-	resp.Email = user.Email
+	resp.ID = uid
+	resp.CreatedAt = userDetails.CreatedAt
+	resp.UpdatedAt = userDetails.UpdatedAt
+	resp.Email = params.Email
 
-	w.WriteHeader(201)
 	json.NewEncoder(w).Encode(resp)
 }
