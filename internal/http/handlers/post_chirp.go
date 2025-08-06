@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/nhdewitt/chirpy/internal/auth"
 	"github.com/nhdewitt/chirpy/internal/database"
 	"github.com/nhdewitt/chirpy/internal/models"
 )
@@ -19,7 +20,25 @@ func (cfg *APIConfig) postChirp(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(500)
 		log.Printf("Error processing new chirp: %s", err)
-		resp.Error = "Something went wrong"
+		resp.Error = "Internal server error"
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	bearerToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		w.WriteHeader(401)
+		log.Printf("Unauthorized request: %s", err)
+		resp.Error = "Unauthorized"
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearerToken, cfg.Secret)
+	if err != nil {
+		w.WriteHeader(401)
+		log.Printf("Unauthorized request: %s", err)
+		resp.Error = "Unauthorized"
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
@@ -31,9 +50,8 @@ func (cfg *APIConfig) postChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params.Body = cleanBody(params.Body)
 	chirp, err := cfg.Queries.PostChirp(r.Context(), database.PostChirpParams{
-		UserID: params.UserID,
+		UserID: userID,
 		Body:   params.Body,
 	})
 	if err != nil {
@@ -45,7 +63,7 @@ func (cfg *APIConfig) postChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp.ID = chirp.ID
-	resp.UserID = chirp.UserID
+	resp.UserID = userID
 	resp.CreatedAt = chirp.CreatedAt
 	resp.UpdatedAt = chirp.UpdatedAt
 	resp.Body = chirp.Body

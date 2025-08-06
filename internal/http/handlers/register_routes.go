@@ -13,6 +13,7 @@ type APIConfig struct {
 	fileserverHits atomic.Int32
 	Queries        *database.Queries
 	Platform       string
+	Secret         string
 }
 
 func NewAPIConfig(db *sql.DB) *APIConfig {
@@ -20,6 +21,7 @@ func NewAPIConfig(db *sql.DB) *APIConfig {
 		fileserverHits: atomic.Int32{},
 		Queries:        database.New(db),
 		Platform:       os.Getenv("PLATFORM"),
+		Secret:         os.Getenv("TOKEN_STRING"),
 	}
 }
 
@@ -36,4 +38,6 @@ func (cfg *APIConfig) RegisterRoutes(mux *http.ServeMux, filepathRoot string) {
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.getChirpHandler)
 	mux.HandleFunc("POST /api/users", cfg.createUser)
 	mux.HandleFunc("POST /api/login", cfg.login)
+	mux.HandleFunc("POST /api/refresh", cfg.refresh)
+	mux.HandleFunc("POST /api/revoke", cfg.revoke)
 }

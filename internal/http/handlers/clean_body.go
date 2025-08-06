@@ -1,24 +1,24 @@
 package handlers
 
-import "strings"
+// import "strings"
 
-func cleanBody(body string) string {
-	invalidWords := map[string]string{
-		"kerfuffle": "****",
-		"sharbert":  "****",
-		"fornax":    "****",
-	}
+// func cleanBody(body string) string {
+// 	invalidWords := map[string]string{
+// 		"kerfuffle": "****",
+// 		"sharbert":  "****",
+// 		"fornax":    "****",
+// 	}
 
-	fields := strings.Fields(body)
-	res := make([]string, 0, len(fields))
+// 	fields := strings.Fields(body)
+// 	res := make([]string, 0, len(fields))
 
-	for _, word := range fields {
-		if censor, invalid := invalidWords[strings.ToLower(word)]; invalid {
-			res = append(res, censor)
-		} else {
-			res = append(res, word)
-		}
-	}
+// 	for _, word := range fields {
+// 		if censor, invalid := invalidWords[strings.ToLower(word)]; invalid {
+// 			res = append(res, censor)
+// 		} else {
+// 			res = append(res, word)
+// 		}
+// 	}
 
-	return strings.Join(res, " ")
-}
+// 	return strings.Join(res, " ")
+// }

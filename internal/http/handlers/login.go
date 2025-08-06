@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/nhdewitt/chirpy/internal/auth"
 	"github.com/nhdewitt/chirpy/internal/database"
@@ -25,6 +26,8 @@ func (cfg *APIConfig) login(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
+
+	params.ExpiresInSeconds = 3600
 
 	var userDetails database.QueryUserRow
 
@@ -49,10 +52,43 @@ func (cfg *APIConfig) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	jwt, err := auth.MakeJWT(uid, cfg.Secret, time.Duration(params.ExpiresInSeconds)*time.Second)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Printf("Error creating JWT: %s", err)
+		resp.Error = "Error creating JWT"
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		w.WriteHeader(500)
+		log.Printf("Error creating refresh token: %s", err)
+		resp.Error = "Error creating refresh token"
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	err = cfg.Queries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    uid,
+		ExpiresAt: time.Now().UTC().AddDate(0, 0, 60),
+	})
+	if err != nil {
+		w.WriteHeader(500)
+		log.Printf("DB error: %s", err)
+		resp.Error = "Refresh token error"
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
 	resp.ID = uid
 	resp.CreatedAt = userDetails.CreatedAt
 	resp.UpdatedAt = userDetails.UpdatedAt
 	resp.Email = params.Email
+	resp.Token = jwt
+	resp.RefreshToken = refreshToken
 
 	json.NewEncoder(w).Encode(resp)
 }

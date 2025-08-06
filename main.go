@@ -31,6 +31,7 @@ func main() {
 
 	// Router
 	mux := http.NewServeMux()
+	apiCfg.Secret = os.Getenv("CHIRPY_AUTH_SECRET")
 	apiCfg.RegisterRoutes(mux, filepathRoot)
 
 	// Start server
