@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"log"
 	"time"
 
@@ -32,6 +33,11 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	if err != nil {
 		log.Printf("Error parsing token: %s", err)
 		return uuid.UUID{}, err
+	}
+
+	if !token.Valid {
+		log.Printf("Token is not valid")
+		return uuid.UUID{}, errors.New("token is not valid")
 	}
 
 	tok, ok := token.Claims.(*jwt.RegisteredClaims)
