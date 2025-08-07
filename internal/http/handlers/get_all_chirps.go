@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"slices"
 
+	"github.com/google/uuid"
+	"github.com/nhdewitt/chirpy/internal/database"
 	"github.com/nhdewitt/chirpy/internal/models"
 )
 
@@ -13,14 +16,31 @@ func (cfg *APIConfig) getAllChirps(w http.ResponseWriter, r *http.Request) {
 
 	var responses []models.ChirpResponse
 
-	chirps, err := cfg.Queries.GetAllChirps(r.Context())
-	if err != nil {
-		var resp models.ChirpResponse
-		w.WriteHeader(500)
-		log.Printf("Error getting all chirps: %s", err)
-		resp.Error = "Error getting all chirps"
-		json.NewEncoder(w).Encode(resp)
-		return
+	author := r.URL.Query().Get("author_id")
+	sort := r.URL.Query().Get("sort")
+
+	var chirps []database.Chirp
+	var err error
+	if author == "" {
+		chirps, err = cfg.Queries.GetAllChirps(r.Context())
+		if err != nil {
+			log.Printf("Error getting all chirps: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		uid, err := uuid.Parse(author)
+		if err != nil {
+			log.Printf("Unable to parse user ID: %s", err)
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		chirps, err = cfg.Queries.GetChirpsFromUser(r.Context(), uid)
+		if err != nil {
+			log.Printf("Error getting user chirps: %s", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	for _, chirp := range chirps {
@@ -32,6 +52,10 @@ func (cfg *APIConfig) getAllChirps(w http.ResponseWriter, r *http.Request) {
 			UserID:    chirp.UserID,
 		}
 		responses = append(responses, resp)
+	}
+
+	if sort == "desc" {
+		slices.Reverse(responses)
 	}
 
 	json.NewEncoder(w).Encode(responses)
