@@ -42,4 +42,5 @@ func (cfg *APIConfig) RegisterRoutes(mux *http.ServeMux, filepathRoot string) {
 	mux.HandleFunc("PUT /api/users", cfg.updateUser)
 	mux.HandleFunc("POST /api/refresh", cfg.refresh)
 	mux.HandleFunc("POST /api/revoke", cfg.revoke)
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.upgradeUser)
 }

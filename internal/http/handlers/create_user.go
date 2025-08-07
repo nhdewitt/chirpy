@@ -51,6 +51,7 @@ func (cfg *APIConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	resp.CreatedAt = user.CreatedAt
 	resp.UpdatedAt = user.UpdatedAt
 	resp.Email = user.Email
+	resp.IsChirpyRed = user.IsChirpyRed
 
 	w.WriteHeader(201)
 	json.NewEncoder(w).Encode(resp)

@@ -89,6 +89,7 @@ func (cfg *APIConfig) login(w http.ResponseWriter, r *http.Request) {
 	resp.Email = params.Email
 	resp.Token = jwt
 	resp.RefreshToken = refreshToken
+	resp.IsChirpyRed = userDetails.IsChirpyRed
 
 	json.NewEncoder(w).Encode(resp)
 }
